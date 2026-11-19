@@ -1,0 +1,35 @@
+# Hand-given function names of re5dx9.exe (Steam 2023). Source of truth for names: tools/gen_functions.py merges them
+# with the Ghidra export into Functions.tsv and include/RE/IDs_Functions.h; RE5_ApplyNames.java writes them to Ghidra.
+# rva = Ghidra address - 0x400000. class = owner (MT class or any namespace; empty = global). signature: C++ type, with
+# the calling convention when it is not __thiscall (check the `ret N`: CommonLibRE5/CLAUDE.md). Virtual functions are
+# named by slot in VFuncs.tsv instead (every override gets the name); a line here overrides that.
+# Tags in note: [code] read in the decompiled code, [rt] confirmed in game, [CE]/[GameX] old tools.
+rva	class	name	signature	note
+0x22C00	MtPropertyList	AddProperty	void(const MtProperty* entry)	[code] copies a 0x28-byte entry, links it at list+4
+0x23530	sApp	Init	?	[code] ret 24 (6 params): takes "RESIDENT EVIL 5", "MTFramework", &sBioMain::DTI; creates the window and sMain (DTI->NewInstance)
+0x23990	sApp	MainLoop	void()	[code][rt] PeekMessage + sMain vfunc 6 per frame (60/s)
+0x25EE0	sMain	ctor	sMain*()	[code] stores this at 0x12340A4 (the singleton)
+0x2D26D0	MtProperty	Alloc	MtProperty*()	[code] pops the free list (0x12496A8) or takes the next array slot
+0x2F9690	MtFile	FatalOpenError	void()	[code] writes re5LoadFails_jim.txt, "Failed open file. %s %d", exit
+0x2F9700	MtFile	Open	bool(const char* path, std::uint32_t mode)	[code] CreateFileA; on failure FatalOpenError
+0x313F40		WinMain	int __stdcall(HINSTANCE, HINSTANCE, char* cmd, int show)	[code] app init + main loop
+0x317850		Mercenaries_UpdateTimer	void(?)	[code][rt] Mercenaries timer (cGameSys+0x680 is a copy)
+0x31AF90	aGame	ScalePlayerDamage	?	[code] per-player difficulty scale (index uPlayer+0x2D9C)
+0x31B010	aGame	ScaleEnemyDamage	?	[code] difficulty scale of the damage taken by enemies
+0x399FB0	sPad	IsKeyDown	bool(std::int32_t code)	[code][rt] false while the game window is inactive
+0x3E74C0	sPlayer	UseItemImpl	? __thiscall(uPlayer* user, uPlayer* target, std::int32_t slot, bool sharePartner)	[code] healing items: ItemInfo heal amount (+0x18)
+0x3E9B70	sPlayer	UseItem	?	[code] -> UseItemImpl
+0x563C90	uEnemy	ProcessHits	?	[code] ret 4; per frame: keeps the strongest HitInfo (+0x28), then OnHit
+0x5DEA50	uEnemy	ApplyDamage	void(HitInfo* hit, std::int32_t baseDamage)	[code][rt] single call site 0x9E08C7 (inside OnHit)
+0x5E0840	uEnemy	OnHit	void(HitInfo* hit)	[code][rt] vfunc 131 CalcDamage, then ApplyDamage
+0x779CE0	uPlayer	HpFeedback	?	[code] called by uPlayer SubHp/AddHp (damage feedback)
+0x84B700	Inventory	GetItem	cItem*(std::int32_t slot)	[code][rt] Inventory = uPlayer+0x21A0
+0x84C1E0	cItem	ConsumeAmmo	std::int32_t __stdcall(cItem* item, std::int32_t n)	[code][rt] num -= n
+0x84C200	cItem	IsInfiniteAmmo	bool __stdcall(cItem* item)	[code][rt] ret 4: __stdcall, not __thiscall
+0x84C2F0	cItem	HasAmmo	bool __stdcall(cItem* item)	[code][rt] num > 0 || infinite
+0x84DB20	Inventory	Consume	std::int32_t(std::uint32_t id, std::int32_t n)	[code] returns what is left
+0x84E640	Inventory	Combine	?	[code] ret 12; ammo into a gun, herbs
+0x393250	sNetwork	SendSpeech	void(uPlayer* speaker, std::uint16_t line, std::int16_t a, std::uint16_t b)	[code] online only (cGameSys+0x56C); this = sNetwork (0x1249C1C)
+0x3E7280	sPlayer	PlaySpeech	void(uPlayer* speaker, std::uint16_t line, std::int16_t a, std::uint16_t b)	[code] locks the system, then the speaker's own PlaySpeech
+0x75B3C0	uPlayer	Speak	void(std::uint16_t line, std::int16_t a, std::uint16_t b, bool network)	[code] sPlayer::PlaySpeech + sNetwork::SendSpeech if network; the game calls it with (line, 0, 1, ...); Vocalizer line ids
+0x77AB60	uPlayer	PlaySpeech	void(std::uint16_t line, std::int16_t a, std::uint16_t b)	[code] voice component at +0x2EA8 (FUN_00B77220); partner reaction for some lines

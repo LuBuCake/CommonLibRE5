@@ -59,19 +59,19 @@ namespace RE
 
     namespace Damage
     {
-        // vfuncs (character vtables)
-        inline constexpr std::size_t kDamage = 66;         // Damage(int16 dmg, int source); returns bool dead
-        inline constexpr std::size_t kCanTakeDamage = 129; // enemies: bool (uint8 part, int dmg)
-        inline constexpr std::size_t kCalcDamage = 131;    // enemies: int (HitInfo*)
+        // vfuncs (character vtables), named in data/VFuncs.tsv
+        inline constexpr std::size_t kDamage = VFUNC::uPawn::Damage;               // 66: bool (int16 dmg, int source), true = died
+        inline constexpr std::size_t kCanTakeDamage = VFUNC::uEnemy::CanTakeDamage; // 129: enemies, bool (uint8 part, int dmg)
+        inline constexpr std::size_t kCalcDamage = VFUNC::uEnemy::CalcDamage;       // 131: enemies, int (HitInfo*)
 
-        // __thiscall(uEnemy*, HitInfo*, int baseDamage). One call site: kApplyDamageCall.
-        inline constexpr REL::Offset EnemyApplyDamage{ 0x5DEA50 };
-        inline constexpr REL::Offset EnemyApplyDamageCall{ 0x5E08C7 }; // inside EnemyOnHit
-        inline constexpr REL::Offset EnemyOnHit{ 0x5E0840 };           // __thiscall(uEnemy*, HitInfo*)
-        inline constexpr REL::Offset PlayerDamage{ 0x764EB0 };         // uPl* vfunc 66
-        inline constexpr REL::Offset TakeDamage{ 0x756FB0 };           // uPawn/uCharacter vfunc 66
-        inline constexpr REL::Offset UseItem{ 0x3E9B70 };              // sPlayer::UseItem
-        inline constexpr REL::Offset ItemTable{ 0xCEACF0 };            // ItemDef* [category][index], 0x48 each
+        // Functions (data/Names.tsv). The old names stay as aliases.
+        inline constexpr REL::Offset EnemyApplyDamage = ID::uEnemy::ApplyDamage; // __thiscall(uEnemy*, HitInfo*, int baseDamage)
+        inline constexpr REL::Offset EnemyApplyDamageCall{ 0x5E08C7 };           // its one call site, inside EnemyOnHit
+        inline constexpr REL::Offset EnemyOnHit = ID::uEnemy::OnHit;             // __thiscall(uEnemy*, HitInfo*)
+        inline constexpr REL::Offset PlayerDamage = ID::uPlayer::Damage;         // uPlayer's vfunc 66
+        inline constexpr REL::Offset TakeDamage = ID::uPawn::Damage;             // uPawn's vfunc 66
+        inline constexpr REL::Offset UseItem = ID::sPlayer::UseItem;
+        inline constexpr REL::Offset ItemTable{ 0xCEACF0 }; // ItemDef* [category][index], 0x48 each
 
         // Hooks the single EnemyApplyDamage call (chain-preserving). The hook receives (enemy, hit, baseDamage) and must
         // call `Original` with the (possibly changed) damage. Returns false if the call site is not the expected one.
@@ -81,7 +81,7 @@ namespace RE
         // Direct damage through vfunc 66 (players: difficulty scaling applies). Returns true if the target died.
         inline bool Apply(uPawn* Target, std::int16_t Amount, std::int32_t Source = 0)
         {
-            return REL::InvokeVFunc<bool>(Target, kDamage, Amount, Source);
+            return Target->Damage(Amount, Source);
         }
     }
 }

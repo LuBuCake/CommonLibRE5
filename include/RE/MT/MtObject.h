@@ -14,16 +14,20 @@
 
 #pragma once
 
+#include "RE/IDs_VFuncs.h"
 #include "RE/MT/MtDTI.h"
+#include "RE/MT/MtField.h"
+
+#include <utility>
 
 namespace RE
 {
-    // Base of every MT Framework class with a DTI. Only the slots below are verified; the vtable is reached by index
-    // (REL::InvokeVFunc) instead of C++ virtuals so an unknown slot can never be called by mistake.
+    // Base of every MT Framework class with a DTI. The vtable is reached by index (REL::InvokeVFunc with the slots of
+    // RE::VFUNC, named in data/VFuncs.tsv) instead of C++ virtuals, so an unknown slot can never be called by mistake.
     class MtObject
     {
     public:
-        static constexpr std::size_t kGetDTI = 4; // "mov eax, &DTI; ret" in every vtable of the tree
+        static constexpr std::size_t kGetDTI = VFUNC::MtObject::getDTI; // "mov eax, &DTI; ret" in every vtable of the tree
 
         const MtDTI* GetDTI() const { return REL::InvokeVFunc<const MtDTI*>(this, kGetDTI); }
 
@@ -40,6 +44,25 @@ namespace RE
         }
 
         std::uintptr_t GetVTable() const { return *reinterpret_cast<const std::uintptr_t*>(this); }
+
+        // Fields and properties by generated id (RE/IDs_Fields.h): Player->Get(RE::FIELD::uCharacter::Hp) = 1000.
+        template <class Id, class... Args>
+        decltype(auto) Get(Id Which, Args... Arguments)
+        {
+            return RE::Get(this, Which, Arguments...);
+        }
+
+        template <class Id, class... Args>
+        decltype(auto) Get(Id Which, Args... Arguments) const
+        {
+            return RE::Get(this, Which, Arguments...);
+        }
+
+        template <class Id, class... Args>
+        bool Set(Id Which, Args&&... Arguments)
+        {
+            return RE::Set(this, Which, std::forward<Args>(Arguments)...);
+        }
 
         // members
         void* vtbl; // 00

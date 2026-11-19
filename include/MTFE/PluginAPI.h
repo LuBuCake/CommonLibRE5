@@ -127,7 +127,7 @@ extern "C"
         void (*AddFrameCallback)(MTFETaskFunction fn, void* context); // runs every frame from now on (thread safe)
     } MTFETaskInterface;
 
-    // Mod settings in the game's own Options menu (Options > MODS > <plugin page>). Each plugin gets one page; every
+    // Mod settings in the game's own Options menu (Extras > Special Settings > MODS > <plugin page>). Each plugin gets one page; every
     // control with a key is saved as an integer in <game>\MTFE\Config\<plugin name>.ini, section [Settings], and loaded
     // when the control is added (never in the game save). Texts are ASCII 0x20..0x7E (the menu font has no accents).
     typedef uint32_t MTFEMenuControl;

@@ -14,7 +14,7 @@
 
 // HelloRE5: smoke test of MTFE + CommonLibRE5. Logs to <game>\MTFE\Logs\HelloRE5.log:
 //   every loader message, the MtDTI tree at PRE_WINMAIN, sMain at GAME_INIT, and a frame counter.
-// Settings page in Options > MODS > Hello RE5 (one row of every kind of control), saved in MTFE\Config\HelloRE5.ini.
+// Settings page in Extras > Special Settings > MODS > Hello RE5 (one row of every kind of control), saved in MTFE\Config\HelloRE5.ini.
 
 #include <RE/RE5.h>
 #include <MTFE/MTFE.h>
@@ -153,6 +153,18 @@ namespace
         MTFE::Log::Info("P1 {} hp {}/{} pos ({:.0f}, {:.0f}, {:.0f}) speed {:.2f} partner {:08X} (players: {})",
                         Player->GetDTI()->GetName(), Player->Hp(), Player->HpMax(), Pos.x, Pos.y, Pos.z, Player->MoveSpeed(),
                         reinterpret_cast<std::uintptr_t>(Player->Partner()), Players->GetPlayerCount());
+
+        // Generated ids (RE/IDs_Fields.h), all found from uPlayer through its ancestors: fields (uCoord's mPos, uCharacter's
+        // Hp from data/Fields.tsv) and properties read through the game's accessors (cUnit's Name, uCoord's mAngle, and
+        // uModel's mTransparency, whose accessors run on the uModel::RenderInfo at +0x298: the id carries that offset).
+        const auto& FieldPos = Player->Get(RE::FIELD::uPlayer::mPos);
+        const char* UnitName = Player->Get(RE::PROP::uPlayer::Name);
+        const auto Angle = Player->Get(RE::PROP::uPlayer::mAngle);
+        const float Transparency = Player->Get(RE::PROP::uPlayer::mTransparency);
+        const bool Written = Player->Set(RE::PROP::uPlayer::mTransparency, Transparency); // same value back: no change
+        MTFE::Log::Info("  ids: mPos field == Pos(): {}, Hp field {}, Name \"{}\", mAngle ({:.2f}, {:.2f}, {:.2f}), mTransparency {:.2f} (set: {})",
+                        &FieldPos == &Player->Pos(), Player->Get(RE::FIELD::uPlayer::Hp), UnitName ? UnitName : "", Angle.x, Angle.y,
+                        Angle.z, Transparency, Written);
         for (std::size_t i = 0; i < RE::uPlayer::kItemCount; ++i)
         {
             auto& Item = Player->Item(i);
@@ -160,7 +172,7 @@ namespace
             {
                 const auto* Name = RE::Items::GetName(Item.id);
                 MTFE::Log::Info("  slot {:2} id 0x{:03X} {:24} {}/{} power {} infinite {} weapon {}", i, Item.id, Name ? Name : "?",
-                                Item.num, Item.max, Item.lvPower, RE::Items::IsInfiniteAmmo(&Item),
+                                Item.num, Item.max, Item.lvPower, Item.IsInfiniteAmmo(),
                                 Item.weapon ? Item.weapon->GetDTI()->GetName() : "-");
             }
         }
@@ -233,8 +245,8 @@ namespace
         static RE::GameKey::Watch HealWatch;
         if (HealWatch.Pressed(HealKey.Get()) && HealEnabled.GetBool())
         {
-            auto* Players = RE::sPlayer::GetSingleton();
-            if (auto* Player = Players ? Players->GetPlayer(0) : nullptr)
+            // Game methods on the objects: SetHp is the uPawn vfunc 67 (RE::VFUNC::uPawn::SetHp), so uPlayer's override runs.
+            if (auto* Player = RE::sPlayer::GetLocalPlayer())
             {
                 const auto Before = Player->Hp();
                 const int Target = Player->HpMax() * HealPercent.Get() / 100;
@@ -244,7 +256,7 @@ namespace
         }
     }
 
-    // Options > MODS > Hello RE5: one row of every kind of control.
+    // Extras > Special Settings > MODS > Hello RE5: one row of every kind of control.
     void BuildMenu()
     {
         using namespace MTFE::Menu;

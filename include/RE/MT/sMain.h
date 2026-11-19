@@ -22,19 +22,6 @@
 
 namespace RE
 {
-    // Field at a fixed offset of an object, for types only partially mapped (offsets confirmed by MT properties).
-    template <class T>
-    T& Field(void* Object, std::uintptr_t ByteOffset)
-    {
-        return *reinterpret_cast<T*>(reinterpret_cast<std::uintptr_t>(Object) + ByteOffset);
-    }
-
-    template <class T>
-    const T& Field(const void* Object, std::uintptr_t ByteOffset)
-    {
-        return *reinterpret_cast<const T*>(reinterpret_cast<std::uintptr_t>(Object) + ByteOffset);
-    }
-
     // MT Framework system base. The ctor (e.g. sMain 0x425EE0) sets the vftable, then InitializeCriticalSection(+4).
     class cSystem : public MtObject
     {

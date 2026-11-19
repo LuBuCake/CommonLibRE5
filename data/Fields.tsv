@@ -1,0 +1,32 @@
+# Hand-given fields of re5dx9.exe (Steam 2023): state the engine does not register as MT properties (health,
+# inventory, match state...). tools/gen_fields.py turns them into RE::FIELD::<class>::<name> = FieldID<type>{ offset },
+# next to the fields of the property dumps (a name here wins over the dump's). type: C++ type (an array: T[N]).
+# Tags in note: [prop] MT property, [code] read in the decompiled code, [rt] confirmed in game, [CE]/[GameX] old tools.
+class	name	type	offset	note
+uCharacter	Hp	std::int16_t	0x1364	[code][rt] player 1000, Majini 800
+uCharacter	HpMax	std::int16_t	0x1366	[code][rt]
+uCharacter	LastDamageSource	std::int32_t	0x1368	[code] set by uPawn::Damage (vfunc 66)
+uCharacter	HitReactionMask	std::uint32_t	0x1358	[rt] CE "Attack Reaction"; player 0x70 / enemies -
+uCharacter	DamageMask	std::uint32_t	0x135C	[rt] GameX/CE: 0 = invulnerable; player 1 / enemies 0x10
+uCharacter	MoveSpeed	float	0x3A4	[rt] 1.0 [CE] "Speed"
+uPlayer	Items	cItem	0x21A4	[prop][rt] first of the 24 slots (Inventory::items)
+uPlayer	WeaponMode	std::uint8_t	0x1AF8	[rt][GameX] 0 male / 1 female set
+uPlayer	Handedness	std::uint8_t	0x1AF9	[rt][GameX] 0 right
+uPlayer	MeleeMove	std::uint32_t	0x10E0	[CE] current melee/move id
+uPlayer	MeleeActive	std::uint32_t	0x10EC	[CE]
+uPlayer	ModelScale	float	0x1E10	[rt] 1.0 [CE] "Size"
+uPlayer	Partner	uPlayer*	0x2A74	[rt] null when solo [GameX]
+uPlayer	MovePos	MtVector3	0x2AD0	[rt] [CE] "moving coordinate"
+uPlayer	MeleeTarget	uCharacter*	0x2DA4	[CE]
+uPlayer	AIControlled	std::uint32_t	0x2DA8	[rt] 0 for the local player [CE] 1 = AI [code] 2 = online partner (speech from the network plays only for it, 0x786970; ignores all damage, uPlayer::Damage); the cPlAction voice responses test == 1
+uPlayer	HpChangeFlags	std::uint32_t	0x2D8C	[code] SubHp: |1 lost, |2 gained
+uPlayer	PlayerIndex	std::uint8_t	0x2D9C	[code] index into the difficulty/damage tables
+sPlayer	Players	uPlayer*[4]	0x24	[rt][GameX]
+sPlayer	PlayerCount	std::uint32_t	0x34	[rt] 1 solo [GameX]
+cGameSys	GameMode	std::int32_t	0x58	[code][rt] 5 = Mercenaries Reunion (2/5 = Mercenaries)
+cGameSys	LocalPlayerMask	std::uint32_t	0x47C	[rt] bit i = player i is local [GameX]
+cGameSys	PlayerStates	std::int32_t[4]	0x620	[code][rt] 2 = in the match
+cGameSys	MercenariesTime	float	0x680	[code][rt] copy of the timer, seconds left
+cGameSys	MercenariesSlot	std::uint32_t	0x600	[CE][rt] 3
+cGameSys	Score	std::int32_t	0x6B4	[CE] (0 at the start, not seen change)
+uPlayer	Speaking	std::uint32_t	0x2674	[rt][GameX] 1 while a voice line plays (Vocalizer log, 2026-11-19; Vocalizer skips its keys then)

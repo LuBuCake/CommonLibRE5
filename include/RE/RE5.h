@@ -17,6 +17,9 @@
 #include "REL/Relocation.h"
 
 #include "RE/IDs_DTI.h"
+#include "RE/IDs_Fields.h"
+#include "RE/IDs_Functions.h"
+#include "RE/IDs_VFuncs.h"
 #include "RE/IDs_VTABLE.h"
 #include "RE/Offsets.h"
 

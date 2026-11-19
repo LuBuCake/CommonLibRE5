@@ -18,24 +18,13 @@
 // Offsets: MT properties (live dump of the units of a Mercenaries match, 2026-11-14) unless noted.
 
 #include "RE/IDs_DTI.h"
+#include "RE/MT/MtMath.h"
 #include "RE/MT/sMain.h"
 
 #include <cstdint>
 
 namespace RE
 {
-    struct alignas(16) MtVector3
-    {
-        float x, y, z, w;
-    };
-    static_assert(sizeof(MtVector3) == 0x10);
-
-    struct alignas(16) MtQuaternion
-    {
-        float x, y, z, w;
-    };
-    static_assert(sizeof(MtQuaternion) == 0x10);
-
     class cUnit : public MtObject
     {
     public:

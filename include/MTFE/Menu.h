@@ -22,7 +22,7 @@
 #include <string_view>
 #include <vector>
 
-// Mod settings page in the game's Options > MODS (MTFE_INTERFACE_MENU). One page per plugin; rows appear in the order
+// Mod settings page in the game's Extras > Special Settings > MODS (MTFE_INTERFACE_MENU). One page per plugin; rows appear in the order
 // they are added. Values with a key are saved in <game>\MTFE\Config\<plugin>.ini [Settings] and are already loaded
 // when Add* returns. Texts: ASCII only (the menu font has no accents).
 //

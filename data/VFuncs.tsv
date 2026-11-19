@@ -1,0 +1,18 @@
+# Names of vtable slots (re5dx9.exe, Steam 2023). A name given to (class, slot) applies to that slot in the class and
+# in every class derived from it: each override is named <its class>::<name> in Functions.tsv and in Ghidra, and
+# RE::VFUNC::<class>::<name> = slot (reachable from the derived classes too) is generated for REL::InvokeVFunc.
+# signature: C++ type without `this` (all slots are __thiscall). Tags in note as in Names.tsv.
+class	slot	name	signature	note
+MtObject	0	DeletingDtor	void*(std::uint32_t flags)	[code] calls the dtor, frees through the allocator if flags & 1, returns this
+MtObject	3	createProperty	void(MtPropertyList* list)	[code][rt] registers the MT properties (docs/PROPERTIES.md)
+MtObject	4	getDTI	const MtDTI*()	[code] mov eax, &DTI; ret
+cUnit	5	Init	void()	[code] menus (uIdOption*): loads the layout, reads the values (docs/MENU.md)
+cUnit	6	Move	void()	[code][rt] every frame: state machine and draw (docs/MENU.md)
+cUnit	12	Kill	void()	[code] menus: closes the screen (docs/MENU.md)
+sMain	6	Update	void()	[code][rt] the frame: called by sApp::MainLoop (60/s)
+uPawn	66	Damage	bool(std::int16_t damage, std::int32_t source)	[code][rt] returns true if it died; players: difficulty scale (docs/GAME-TYPES.md)
+uPawn	67	SetHp	void(std::int16_t value)	[code][rt] clamped to [0, max]
+uPawn	68	AddHp	void(std::int16_t value)	[code][rt]
+uPawn	69	SubHp	void(std::int16_t value)	[code][rt] uPlayer: damage feedback, flags at +0x2D8C
+uEnemy	129	CanTakeDamage	bool(std::uint8_t part, std::int32_t damage)	[code] called by uEnemy::ApplyDamage
+uEnemy	131	CalcDamage	std::int32_t(HitInfo* hit)	[code][rt] called by uEnemy::OnHit

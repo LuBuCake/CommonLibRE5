@@ -17,6 +17,11 @@
 //              (accessor-only or crashing classes are partial: their real members are null).
 //   live:      each line "<hex address>" in <MTFE>\propdump.txt is a live object, dumped on itself
 //              -> <MTFE>\Logs\properties_live.tsv (complete). Polled every 0.5 s; the file is deleted after.
+//   hotkey:    (Extras > Special Settings > MODS > PropertyDump, F7) every unit of every move line, one object per class not dumped
+//              yet in this session -> properties_live.tsv.
+// Column "owner": the object the accessors run on (MtProperty::owner). "this" = the dumped object, "+0x.." = a
+// sub-object inside it, "@0x.." = a separate object. A property of a sub-object (uModel::RenderInfo's mTransparency,
+// listed by uPlayer) called with the unit as `this` crashes: tools/gen_fields.py needs this column.
 
 #include <RE/IDs_Classes.h>
 #include <RE/RE5.h>
@@ -24,6 +29,7 @@
 
 #include <Windows.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <share.h>
@@ -78,8 +84,22 @@ namespace
             {
                 Where[0] = 0;
             }
-            std::fprintf(File, "%s\t%s\t%u\t0x%X\t%s\t%u\t%08X\n", Prefix, SafeName(Property.name), static_cast<unsigned>(Property.type), Property.attr,
-                         Where, Property.count, static_cast<unsigned>(Property.set));
+            char Owner[24];
+            const auto OwnerAddress = reinterpret_cast<std::uintptr_t>(Property.owner);
+            if (OwnerAddress == Object)
+            {
+                std::snprintf(Owner, sizeof(Owner), "this");
+            }
+            else if (OwnerAddress > Object && OwnerAddress < Object + Size)
+            {
+                std::snprintf(Owner, sizeof(Owner), "+0x%X", static_cast<unsigned>(OwnerAddress - Object));
+            }
+            else
+            {
+                std::snprintf(Owner, sizeof(Owner), "@0x%08X", static_cast<unsigned>(OwnerAddress));
+            }
+            std::fprintf(File, "%s\t%s\t%u\t0x%X\t%s\t%u\t%08X\t%s\n", Prefix, SafeName(Property.name), static_cast<unsigned>(Property.type),
+                         Property.attr, Where, Property.count, static_cast<unsigned>(Property.set), Owner);
         };
         List.ForEach(WriteProperty);
     }
@@ -92,7 +112,7 @@ namespace
         {
             return;
         }
-        std::fprintf(File, "class\tname\ttype\tattr\toffset\tcount\tsetter\n");
+        std::fprintf(File, "class\tname\ttype\tattr\toffset\tcount\tsetter\towner\n");
 
         const auto Base = REL::Module::Get().GetBase();
         std::size_t PropertyCount = 0, Crashed = 0, Classes = 0;
@@ -187,12 +207,61 @@ namespace
         MTFE::Log::Info("live dump of {} object(s) -> {}", Addresses.size(), Out);
     }
 
+    MTFE::Menu::Control UnitsKey;
+
+    // Every unit of every move line, one object per class (the first one met) per session.
+    void DumpUnits()
+    {
+        static std::vector<std::string> Done;
+        auto* Units = RE::sUnit::GetSingleton();
+        if (!Units)
+        {
+            return;
+        }
+        std::vector<std::uintptr_t> Objects;
+        for (std::uint32_t Line = 0; Line < RE::sUnit::kLineCount; ++Line)
+        {
+            Units->ForEachUnit(static_cast<RE::sUnit::Line>(Line),
+                               [&](RE::cUnit* Unit)
+                               {
+                                   const auto* Dti = Unit->GetDTI();
+                                   const std::string Name = Dti ? SafeName(Dti->GetName()) : "?";
+                                   if (Dti && std::find(Done.begin(), Done.end(), Name) == Done.end())
+                                   {
+                                       Done.push_back(Name);
+                                       Objects.push_back(reinterpret_cast<std::uintptr_t>(Unit));
+                                   }
+                                   return true;
+                               });
+        }
+        const auto Out = MTFE::GetMTFEPath() + "Logs\\properties_live.tsv";
+        if (FILE* File = _fsopen(Out.c_str(), "a", _SH_DENYWR))
+        {
+            for (auto Address : Objects)
+            {
+                DumpLive(Address, File);
+            }
+            std::fclose(File);
+        }
+        MTFE::Log::Info("units: {} new class(es) dumped ({} in this session) -> {}", Objects.size(), Done.size(), Out);
+    }
+
+    void OnFrame()
+    {
+        PollRequests();
+        static RE::GameKey::Watch Key;
+        if (Key.Pressed(UnitsKey.Get()))
+        {
+            DumpUnits();
+        }
+    }
+
     void OnMessage(MTFE::Message* Msg)
     {
         if (Msg->type == MTFE_MESSAGE_GAME_INIT)
         {
             MTFE::AddTask(DumpAll);
-            MTFE::AddFrameCallback(PollRequests);
+            MTFE::AddFrameCallback(OnFrame);
         }
     }
 }
@@ -200,5 +269,7 @@ namespace
 MTFE_PLUGIN_LOAD(const MTFE::LoadInterface* Interface)
 {
     MTFE::Init(Interface);
+    UnitsKey = MTFE::Menu::AddHotkey("iUnitsKey", "Dump live units", "Dumps the MT properties of every unit in the level (one object per class).",
+                                     RE::GameKey::kF8 - 1); // F7
     return MTFE::RegisterListener(OnMessage);
 }

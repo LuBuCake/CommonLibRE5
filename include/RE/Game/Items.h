@@ -119,25 +119,15 @@ namespace RE
         const WeaponInfo* GetWeaponInfo(std::uint32_t ID); // weapons only
         const char* GetName(std::uint32_t ID);             // GameX name, else the weapon debug name, else nullptr
 
-        // [code] helpers used by the fire action. __stdcall: they end in "ret 4" / "ret 8" (declaring them cdecl
-        // unbalanced the stack and crashed HelloRE5 with a /GS failure, 2026-11-14).
-        inline constexpr REL::Offset ConsumeAmmoFn{ 0x84C1E0 };    // int __stdcall (cItem*, int n): num -= n
-        inline constexpr REL::Offset IsInfiniteAmmoFn{ 0x84C200 }; // bool __stdcall (cItem*)
-        inline constexpr REL::Offset HasAmmoFn{ 0x84C2F0 };        // bool __stdcall (cItem*): num > 0 || infinite
+        // [code] helpers used by the fire action: methods of cItem now (RE/Game/Character.h). The old names stay.
+        inline constexpr REL::Offset ConsumeAmmoFn = ID::cItem::ConsumeAmmo;
+        inline constexpr REL::Offset IsInfiniteAmmoFn = ID::cItem::IsInfiniteAmmo;
+        inline constexpr REL::Offset HasAmmoFn = ID::cItem::HasAmmo;
         inline constexpr REL::Offset PlayerFireAction{ 0x889F30 }; // player fire action update (virtual)
 
-        inline bool IsInfiniteAmmo(cItem* Item)
-        {
-            return REL::Relocation<bool(__stdcall*)(cItem*)>(IsInfiniteAmmoFn)(Item);
-        }
-        inline bool HasAmmo(cItem* Item)
-        {
-            return REL::Relocation<bool(__stdcall*)(cItem*)>(HasAmmoFn)(Item);
-        }
-        inline void ConsumeAmmo(cItem* Item, std::int32_t Count)
-        {
-            REL::Relocation<std::int32_t(__stdcall*)(cItem*, std::int32_t)>{ ConsumeAmmoFn }(Item, Count);
-        }
+        inline bool IsInfiniteAmmo(cItem* Item) { return Item->IsInfiniteAmmo(); }
+        inline bool HasAmmo(cItem* Item) { return Item->HasAmmo(); }
+        inline void ConsumeAmmo(cItem* Item, std::int32_t Count) { Item->ConsumeAmmo(Count); }
     }
 
     // The player's inventory (uPlayer + 0x21A0). [code] 0xC4B700/0xC4DB20 loop over 24 cItem.
@@ -150,15 +140,27 @@ namespace RE
         static constexpr std::uint32_t kSlotEquippedItem = 0xF; // equipType == 2
         static constexpr std::uint32_t kSlotAutoWeapon = 0x10;  // weapon the game would pick
 
-        inline static constexpr REL::Offset GetItemFn{ 0x84B700 }; // __thiscall(Inventory*, slot) -> cItem*
-        inline static constexpr REL::Offset ConsumeFn{ 0x84DB20 }; // __thiscall(Inventory*, id, n) -> int left
-        inline static constexpr REL::Offset CombineFn{ 0x84E640 }; // slot -> slot (ammo into gun, herbs)
+        inline static constexpr REL::Offset GetItemFn = ID::Inventory::GetItem; // __thiscall(Inventory*, slot) -> cItem*
+        inline static constexpr REL::Offset ConsumeFn = ID::Inventory::Consume; // __thiscall(Inventory*, id, n) -> int left
+        inline static constexpr REL::Offset CombineFn = ID::Inventory::Combine; // slot -> slot (ammo into gun, herbs); ret 12
 
         // Slot by SlotNo (0..23) or a kSlot* constant.
-        cItem* GetItem(std::uint32_t Slot) { return REL::InvokeThiscall<cItem*>(GetItemFn.GetAddress(), this, Slot); }
+        cItem* GetItem(std::uint32_t Slot)
+        {
+            using Func = cItem*(__thiscall*)(Inventory*, std::uint32_t);
+            static REL::Relocation<Func> Call{ ID::Inventory::GetItem };
+            return Call(this, Slot);
+        }
+
         cItem* GetEquipped() { return GetItem(kSlotEquipped); }
+
         // Takes Count of item ID from the slots holding it (fewest first), clearing emptied slots. Returns what was missing.
-        std::int32_t Consume(std::uint32_t ID, std::int32_t Count) { return REL::InvokeThiscall<std::int32_t>(ConsumeFn.GetAddress(), this, ID, Count); }
+        std::int32_t Consume(std::uint32_t ItemID, std::int32_t Count)
+        {
+            using Func = std::int32_t(__thiscall*)(Inventory*, std::uint32_t, std::int32_t);
+            static REL::Relocation<Func> Call{ ID::Inventory::Consume };
+            return Call(this, ItemID, Count);
+        }
 
         // members
         std::uint32_t unk00; // 000
